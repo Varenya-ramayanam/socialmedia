@@ -1,86 +1,117 @@
-import { useState } from "react";
-import { Send } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import socket from "../socket";
+import axios from "axios";
 
-const ChatRoom = () => {
-  const [roomNumber, setRoomNumber] = useState("");
-  const [joinedRoom, setJoinedRoom] = useState(null);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
+const Chat = () => {
+    const [room, setRoom] = useState("");
+    const [message, setMessage] = useState("");
+    const [messages, setMessages] = useState([]);
+    const [joinedRoom, setJoinedRoom] = useState(null);
+    const [userEmail, setUserEmail] = useState("");
 
-  const joinRoom = () => {
-    if (roomNumber.trim()) {
-      setJoinedRoom(roomNumber);
-    }
-  };
+    useEffect(() => {
+        const storedEmail = localStorage.getItem("user");
+        if (!storedEmail) {
+            console.warn("⚠️ Missing user email! Redirecting...");
+            alert("Please log in to use the chat.");
+            return;
+        }
+    
+        setUserEmail(storedEmail);
+    
+        const handleMessage = (msg) => {
+            setMessages((prevMessages) => [...prevMessages, msg]);
+        };
+    
+        socket.off("receiveMessage", handleMessage); // Prevent duplicate listeners
+        socket.on("receiveMessage", handleMessage);
+    
+        return () => {
+            socket.off("receiveMessage", handleMessage);
+        };
+    }, []);
+    
 
-  const sendMessage = () => {
-    if (message.trim()) {
-      setMessages([...messages, { text: message, sender: "You" }]);
-      setMessage("");
-    }
-  };
+    const joinRoom = async () => {
+        if (!room.trim() || room === joinedRoom) return;
 
-  return (
-    <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg mt-10">
-      {!joinedRoom ? (
-        <div className="flex flex-col items-center">
-          <h2 className="text-2xl font-bold mb-4">Join a Chatroom</h2>
-          <input
-            type="text"
-            value={roomNumber}
-            onChange={(e) => setRoomNumber(e.target.value)}
-            placeholder="Enter Room Number"
-            className="border p-2 rounded-md w-64 text-center"
-          />
-          <button
-            onClick={joinRoom}
-            className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
-          >
-            Join Room
-          </button>
-        </div>
-      ) : (
+        if (joinedRoom) {
+            socket.emit("leaveRoom", joinedRoom);
+        }
+
+        socket.emit("joinRoom", room);
+        setJoinedRoom(room);
+
+        try {
+            const { data } = await axios.get(`http://localhost:5000/api/messages/${room}`);
+            setMessages(data);
+        } catch (error) {
+            console.error("⚠️ Error fetching messages:", error);
+        }
+    };
+
+    const sendMessage = async () => {
+        if (!message.trim() || !joinedRoom || !userEmail) {
+            console.warn("⚠️ Message, room, or user email missing!");
+            return;
+        }
+
+        const newMessage = { sender: userEmail, content: message, room: joinedRoom };
+
+        try {
+            socket.emit("sendMessage", newMessage);
+            await axios.post("http://localhost:5000/api/messages/send", newMessage, {
+                headers: { "Content-Type": "application/json" },
+            });
+            setMessages((prevMessages) => [...prevMessages, newMessage]);
+        } catch (error) {
+            console.error("🔥 Error sending message:", error);
+        }
+
+        setMessage("");
+    };
+
+    return (
         <div>
-          <h2 className="text-xl font-bold mb-4">Room #{joinedRoom}</h2>
-          <div className="h-64 overflow-y-auto border p-4 rounded-md bg-gray-100">
-            {messages.length === 0 ? (
-              <p className="text-gray-500 text-center">No messages yet...</p>
-            ) : (
-              messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`p-2 my-2 rounded-md max-w-xs ${
-                    msg.sender === "You"
-                      ? "bg-blue-500 text-white self-end ml-auto"
-                      : "bg-gray-300 text-black self-start"
-                  }`}
-                >
-                  <p className="text-sm">{msg.sender}: {msg.text}</p>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Message Input */}
-          <div className="mt-4 flex items-center">
+            <h2>Chat Room</h2>
+            <p>Logged in as: <strong>{userEmail || "Guest"}</strong></p>
+            
             <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="border p-2 rounded-md flex-grow"
+                type="text"
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                placeholder="Enter room name..."
             />
-            <button
-              onClick={sendMessage}
-              className="ml-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 flex items-center"
-            >
-              <Send size={18} className="mr-1" /> Send
+            <button onClick={joinRoom} disabled={!room.trim()}>
+                {joinedRoom ? "Switch Room" : "Join Room"}
             </button>
-          </div>
+
+            {joinedRoom && (
+                <>
+                    <h3>Room: {joinedRoom}</h3>
+                    <div style={{ border: "1px solid black", height: "300px", overflowY: "scroll", padding: "10px" }}>
+                        {messages.length > 0 ? (
+                            messages.map((msg, index) => (
+                                <p key={index}>
+                                    <strong>{msg.sender}:</strong> {msg.content}
+                                </p>
+                            ))
+                        ) : (
+                            <p>No messages yet...</p>
+                        )}
+                    </div>
+                    <input
+                        type="text"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                        placeholder="Type a message..."
+                    />
+                    <button onClick={sendMessage}>Send</button>
+                </>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
-export default ChatRoom;
+export default Chat;

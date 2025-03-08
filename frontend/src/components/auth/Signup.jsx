@@ -22,7 +22,7 @@ const SignupForm = () => {
     }
 
     try {
-      await axios.post("http://localhost:5000/auth/signup", formData, {
+      await axios.post("http://localhost:5000/api/users/signup", formData, {
         withCredentials: true, // Important for cookies
       });
 

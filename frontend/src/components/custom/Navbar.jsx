@@ -36,7 +36,7 @@ const Navbar = () => {
 
         {/* Icons & Profile */}
         <div className="flex items-center gap-6">
-          <Link to="/" className={`cursor-pointer ${location.pathname === "/" ? "text-blue-600" : ""}`}>
+          <Link to="/home" className={`cursor-pointer ${location.pathname === "/home" ? "text-blue-600" : ""}`}>
             <Home size={24} />
           </Link>
           <Link to="/chat" className={`cursor-pointer ${location.pathname === "/chat" ? "text-blue-600" : ""}`}>

@@ -5,8 +5,15 @@ const ProfilePage = () => {
     name: "Varenya Ramayanam",
     username: "varenya_r",
     bio: "Tech enthusiast | Developer | Music lover",
-    followers: 1200,
-    following: 150,
+    followers: [
+      { id: 1, name: "Alice", username: "alice_w" },
+      { id: 2, name: "John", username: "john_doe" },
+      { id: 3, name: "Sophia", username: "sophia_m" },
+    ],
+    following: [
+      { id: 4, name: "Michael", username: "michael_b" },
+      { id: 5, name: "Emma", username: "emma_k" },
+    ],
     posts: [
       { id: 1, image: "https://source.unsplash.com/random/300x300?tech", caption: "Building something cool! 🚀" },
       { id: 2, image: "https://source.unsplash.com/random/300x300?music", caption: "Jamming to my favorite tunes 🎶" },
@@ -15,18 +22,22 @@ const ProfilePage = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [updatedUser, setUpdatedUser] = useState(user);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFollowing, setShowFollowing] = useState(false);
 
-  const handleEditClick = () => {
-    setIsEditing(true);
-  };
-
+  const handleEditClick = () => setIsEditing(true);
   const handleSaveClick = () => {
     setUser(updatedUser);
     setIsEditing(false);
   };
+  const handleChange = (e) => setUpdatedUser({ ...updatedUser, [e.target.name]: e.target.value });
 
-  const handleChange = (e) => {
-    setUpdatedUser({ ...updatedUser, [e.target.name]: e.target.value });
+  const handleRemoveFollower = (id) => {
+    setUser({ ...user, followers: user.followers.filter((f) => f.id !== id) });
+  };
+
+  const handleUnfollow = (id) => {
+    setUser({ ...user, following: user.following.filter((f) => f.id !== id) });
   };
 
   return (
@@ -74,8 +85,18 @@ const ProfilePage = () => {
               <p className="text-gray-500">@{user.username}</p>
               <p className="text-gray-700">{user.bio}</p>
               <div className="flex space-x-4 mt-2">
-                <p className="font-semibold">{user.followers} Followers</p>
-                <p className="font-semibold">{user.following} Following</p>
+                <button
+                  className="font-semibold text-blue-600 underline"
+                  onClick={() => setShowFollowers(true)}
+                >
+                  {user.followers.length} Followers
+                </button>
+                <button
+                  className="font-semibold text-blue-600 underline"
+                  onClick={() => setShowFollowing(true)}
+                >
+                  {user.following.length} Following
+                </button>
               </div>
               <button
                 onClick={handleEditClick}
@@ -98,6 +119,70 @@ const ProfilePage = () => {
           </div>
         ))}
       </div>
+
+      {/* Followers List */}
+      {showFollowers && (
+        <div className="fixed inset-0 flex justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-80">
+            <h3 className="text-lg font-semibold">Followers</h3>
+            {user.followers.length === 0 ? (
+              <p className="text-gray-500">No followers yet.</p>
+            ) : (
+              <ul>
+                {user.followers.map((f) => (
+                  <li key={f.id} className="flex justify-between items-center p-2 border-b">
+                    <p>{f.name} (@{f.username})</p>
+                    <button
+                      onClick={() => handleRemoveFollower(f.id)}
+                      className="text-red-500 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={() => setShowFollowers(false)}
+              className="mt-3 bg-gray-300 px-4 py-2 rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Following List */}
+      {showFollowing && (
+        <div className="fixed inset-0 flex justify-center items-center bg-gray-900 bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-80">
+            <h3 className="text-lg font-semibold">Following</h3>
+            {user.following.length === 0 ? (
+              <p className="text-gray-500">You're not following anyone yet.</p>
+            ) : (
+              <ul>
+                {user.following.map((f) => (
+                  <li key={f.id} className="flex justify-between items-center p-2 border-b">
+                    <p>{f.name} (@{f.username})</p>
+                    <button
+                      onClick={() => handleUnfollow(f.id)}
+                      className="text-red-500 text-sm"
+                    >
+                      Unfollow
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={() => setShowFollowing(false)}
+              className="mt-3 bg-gray-300 px-4 py-2 rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
